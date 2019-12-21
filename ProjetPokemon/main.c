@@ -33,8 +33,6 @@ void Ordre(Node *noeud){
 			printf("%ld\t",noeud->Actuel->Level);
       printf("\n");
 			Ordre((*noeud).RightSon);
-  }else{
-    printf("NULL\n");
   }
 }
 
@@ -53,7 +51,6 @@ Node *Ajout(Node *Noeud,Pokemon *pokemon) {
   if (Noeud==NULL){
     Node *Nouveau=NULL;
     Nouveau=(Node*)malloc(sizeof(Nouveau));
-    printf("%p\n",Nouveau);
     printf("%ld,%ld\n",pokemon->Number,pokemon->Level);
     (Nouveau->Actuel)=(pokemon);
     printf("%ld,%ld\n",Nouveau->Actuel->Number,Nouveau->Actuel->Level);
@@ -73,6 +70,7 @@ Node *Ajout(Node *Noeud,Pokemon *pokemon) {
 
 Pokemon *LectureListePokemon(FILE *fichier){
   Pokemon *Nouveau;
+  Nouveau=(Pokemon*)malloc(sizeof(Nouveau));
   fscanf(fichier,"%ld %ld",&(Nouveau->Number),&(Nouveau->Level));
   return Nouveau;
 }
@@ -85,15 +83,16 @@ int main() {
   if(fichier==NULL) printf("Erreur ouverture fichier");
   for (size_t i = 1; i <= 31; i++) {
     test=LectureListePokemon(fichier);
-    printf("%ld,%ld\n",test->Number,test->Level);
-    printf("%p,%p\n",ListePokemon,test);
     ListePokemon=Ajout(ListePokemon,test);
-    printf("NULL?=%p\n",ListePokemon);
+    printf("Premier pokemon=%ld,%ld\n",ListePokemon->Actuel->Number,ListePokemon->Actuel->Level);
+    free(test);printf("Debut Ordre:\n");
     Ordre(ListePokemon);
+		printf("Fin Ordre:\n");
   }
   Ordre(ListePokemon);
-  printf("Fin Affichage");
   DestructionTotal(ListePokemon);
+	free(ListePokemon);
   fclose(fichier);
+	//test
   return 0;
 }
