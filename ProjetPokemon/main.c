@@ -149,8 +149,8 @@ void AffichageCarte() {
 }
 
 void CombatNature(Joueur *Player,Pokemon *PokemonAleatoire){
-	mvprintw(20,71,"Pokemon:%s",Player->pokemon1->Name);
-	mvprintw(21,71,"Contre:%s",PokemonAleatoire->Name);
+	mvprintw(20,73,"Pokemon:%s",Player->pokemon1->Name);
+	mvprintw(21,73,"Contre:%s",PokemonAleatoire->Name);
 	refresh();
 }
 
@@ -263,6 +263,7 @@ void RencontreAleatoire(Joueur *Player,Node *ListePokemon){
 Joueur *ChoixStarter(Node*ListePokemon){
 	int Touche;
 	Joueur *Player=(Joueur*)malloc(sizeof(Player));
+	mvprintw(LINES/2-1,COLS/2,"Entrez le numero du pokemon voulu pour commencer");
 	mvprintw(LINES/2,COLS/2,"Bulbizarre Salameche Carapuce");
 	mvprintw(LINES/2 +1,COLS/2,"1             2         3");
 	refresh();
@@ -291,7 +292,7 @@ int main(){
 	Pokemon *test=NULL,*PokemonRencontre=NULL;
 	Joueur *Player=NULL;
 	system("clear");
-	printf("Voulez-vous démarrer une nouvelle partie ?(1/2)");
+	printf("Voulez-vous démarrer une nouvelle partie ?(1=Nouvelle partie/2=Ancienne partie)");
 	scanf("%d",&ChoixPartie);
 	printf("Choix=%d\n",ChoixPartie);
 	fichier=fopen("ListePokemon.txt","r");
@@ -300,7 +301,7 @@ int main(){
 		test=LectureListePokemon(fichier);
 		ListePokemon=Ajout(ListePokemon,test);
 	}
-	Ordre(ListePokemon);
+	//Ordre(ListePokemon);
 	ncurses_initialiser();
 	if(ChoixPartie==1){
 		Player=ChoixStarter(ListePokemon);
@@ -322,6 +323,8 @@ int main(){
 			if ((posX<=49)&&(posX>=30)&&(posY<=20)&&(posY>=16)||((posX<=49)&&(posX>=41)&&(posY<=29)&&(posY>=20))){
 				RencontreAleatoire(Player,ListePokemon);
 			}
+			mvprintw(29,75,"Utilisez les touches directionnels pour vous deplacez");
+			mvprintw(30,75,"Press f3 pour sortir");
 			refresh();
 	} while((ch = getch()) != KEY_F(3));
 //##########################################################################################
