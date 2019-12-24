@@ -3,16 +3,24 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <color.h>
 
-typedef struct Node Node;
+typedef struct NodePokemon NodePokemon;
+typedef struct NodeAtt NodeAtt;
 typedef struct Pokemon Pokemon;
 typedef struct Joueur Joueur;
 typedef struct att att;
 
-struct Node{
+struct NodePokemon{
 	Pokemon *Actuel;
-	Node *LeftSon;
-	Node *RightSon;
+	NodePokemon *LeftSon;
+	NodePokemon *RightSon;
+};
+
+struct NodeAtt{
+	att *Actuel;
+	NodeAtt *LeftSon;
+	NodeAtt *RightSon;
 };
 
 struct Joueur{
@@ -25,8 +33,9 @@ struct Joueur{
 };
 
 struct att{
+	int Number;
 	int Dommage;
-	char Nom[10];
+	char Name[13];
 };
 
 struct Pokemon{
@@ -37,10 +46,36 @@ struct Pokemon{
   size_t def;
   size_t hp;
   size_t speed;
-  size_t ActualHp;
+  int ActualHp;
   size_t ActualXp;
-	att Attaques[4];
+	att *Attaques[4];
 };
+
+void viderBuffer(){
+    int c = 0;
+    while (c != '\n' && c != EOF)
+    {
+        c = getchar();
+    }
+}
+
+void AffichageName(char Name[14]){
+	for (size_t i = 0; i < 14; i++) {
+		mvprintw(i,140,"%c",Name[i]);
+	}
+}
+
+void EgaliteEntreTableau(char Destination[14],char Origine[14]){
+	for (size_t i = 0; i < 14; i++) {
+		Destination[i]=Origine[i];
+	}
+}
+
+void ModificationName(char Name[14]){
+	for (size_t i = 0; i < 14; i++) {
+		if(Name[i]==10) Name[i]='\0';
+	}
+}
 
 void ncurses_initialiser() {
   initscr();	        /* Demarre le mode ncurses */
@@ -51,7 +86,8 @@ void ncurses_initialiser() {
   curs_set(FALSE);      /* Masque le curseur */
 }
 
-void Ordre(Node *noeud){
+/*
+void Ordre(NodePokemon *noeud){
   if (noeud!=NULL){
 			Ordre((*noeud).LeftSon);
 			printf("%ld\t",noeud->Actuel->Number);
@@ -64,23 +100,57 @@ void Ordre(Node *noeud){
       printf("\n");
 			Ordre((*noeud).RightSon);
   }
+}*/
+
+void Ordre(NodeAtt *noeud){
+  if (noeud!=NULL){
+			Ordre((*noeud).LeftSon);
+			printf("%d\t",noeud->Actuel->Number);
+			printf("%d\t",noeud->Actuel->Dommage);
+			printf("%s\t",noeud->Actuel->Name );
+      printf("\n");
+			Ordre((*noeud).RightSon);
+  }
 }
 
-void DestructionTotal(Node *Actuel){
+void DestructionTotal(NodePokemon *Actuel){
 	if(Actuel!=NULL){
 		DestructionTotal((*Actuel).LeftSon);
 		DestructionTotal((*Actuel).RightSon);
+		free(Actuel->RightSon->Actuel->Attaques[0]);
+		free(Actuel->RightSon->Actuel->Attaques[1]);
+		free(Actuel->LeftSon->Actuel->Attaques[0]);
+		free(Actuel->LeftSon->Actuel->Attaques[1]);
 		(*Actuel).RightSon=NULL;
 		(*Actuel).LeftSon=NULL;
-		Actuel=NULL;
 		free(Actuel);
+		Actuel=NULL;
 	}
 }
 
-Node *Ajout(Node *Noeud,Pokemon *pokemon) {
+NodeAtt *AjoutAttaque(NodeAtt *Noeud,att *attaques) {
   if (Noeud==NULL){
-		Node *Nouveau=NULL;
-    Nouveau=(Node*)malloc(sizeof(Nouveau));
+		NodeAtt *Nouveau=NULL;
+    Nouveau=(NodeAtt*)malloc(sizeof(Nouveau));
+    (Nouveau->Actuel)=(attaques);
+    (*Nouveau).RightSon=NULL;
+    (*Nouveau).LeftSon=NULL;
+    return Nouveau;
+  }
+  else{
+    if (Noeud->Actuel->Number<attaques->Number){
+      (*Noeud).RightSon=AjoutAttaque((*Noeud).RightSon,attaques);
+    }
+    else{
+      (*Noeud).LeftSon=AjoutAttaque((*Noeud).LeftSon,attaques);
+    }
+  }
+}
+
+NodePokemon *AjoutPokemon(NodePokemon *Noeud,Pokemon *pokemon) {
+  if (Noeud==NULL){
+		NodePokemon *Nouveau=NULL;
+    Nouveau=(NodePokemon*)malloc(sizeof(Nouveau));
     (Nouveau->Actuel)=(pokemon);
     (*Nouveau).RightSon=NULL;
     (*Nouveau).LeftSon=NULL;
@@ -88,20 +158,46 @@ Node *Ajout(Node *Noeud,Pokemon *pokemon) {
   }
   else{
     if (Noeud->Actuel->Number<pokemon->Number){
-      (*Noeud).RightSon=Ajout((*Noeud).RightSon,pokemon);
+      (*Noeud).RightSon=AjoutPokemon((*Noeud).RightSon,pokemon);
     }
     else{
-      (*Noeud).LeftSon=Ajout((*Noeud).LeftSon,pokemon);
+      (*Noeud).LeftSon=AjoutPokemon((*Noeud).LeftSon,pokemon);
     }
   }
 }
 
 Pokemon *LectureListePokemon(FILE *fichier){
   Pokemon *Nouveau;
+	char Nom[13];
   Nouveau=(Pokemon*)malloc(sizeof(Pokemon));
+	Nouveau->Attaques[0]=(att*)malloc(sizeof(att));
+	Nouveau->Attaques[1]=(att*)malloc(sizeof(att));
 	Nouveau->Level=1;
-  fscanf(fichier,"%ld %ld %ld %ld %ld",&(Nouveau->Number),&(Nouveau->hp),&(Nouveau->att),&(Nouveau->def),&(Nouveau->speed));
-	fgets(Nouveau->Name,14,fichier);
+  fscanf(fichier,"%ld",&(Nouveau->Number));
+	fscanf(fichier,"%ld",&(Nouveau->hp));
+	fscanf(fichier,"%ld",&(Nouveau->att));
+	fscanf(fichier,"%ld",&(Nouveau->def));
+	fscanf(fichier,"%ld",&(Nouveau->speed));
+	Nouveau->ActualHp=(int)(Nouveau->hp);
+	Nouveau->ActualXp=0;
+	fscanf(fichier,"%d",&(Nouveau->Attaques[0]->Number));
+	fscanf(fichier,"%d",&(Nouveau->Attaques[1]->Number));
+
+	fgets(Nom,13,fichier);
+	ModificationName(Nom);
+	EgaliteEntreTableau(Nouveau->Name,Nom);
+//	printf("%ld %ld %ld %ld %ld %s\n",(Nouveau->Number),(Nouveau->hp),(Nouveau->att),(Nouveau->def),(Nouveau->speed),Nouveau->Name);
+  return Nouveau;
+}
+
+att *LectureListeAtt(FILE *fichier){
+  att *Nouveau;
+	char Nom[14];
+  Nouveau=(att*)malloc(sizeof(att));
+  fscanf(fichier,"%d %d",&(Nouveau->Number),&(Nouveau->Dommage));
+	fgets(Nom,14,fichier);
+	ModificationName(Nom);
+	EgaliteEntreTableau(Nouveau->Name,Nom);
 //	printf("%ld %ld %ld %ld %ld %s\n",(Nouveau->Number),(Nouveau->hp),(Nouveau->att),(Nouveau->def),(Nouveau->speed),Nouveau->Name);
   return Nouveau;
 }
@@ -145,12 +241,60 @@ void AffichageCarte() {
 	AffichageColonne(9,20,49);
 	AffichageLigne(7,29,41);
 
+	AffichageColonne(45,0,70);
+
 	refresh();
 }
 
 void CombatNature(Joueur *Player,Pokemon *PokemonAleatoire){
-	mvprintw(20,73,"Pokemon:%s",Player->pokemon1->Name);
-	mvprintw(21,73,"Contre:%s",PokemonAleatoire->Name);
+	int AttaqueChoisi=0,DegatPlayer=0,DegatAdversaire=0,AttaqueAleatoire=0,c;
+	AffichageName(Player->pokemon1->Name);
+	mvprintw(11,73,"Pokemon:%s",Player->pokemon1->Name);
+	mvprintw(11,95,"Attaque 1:%s",Player->pokemon1->Attaques[0]->Name);
+	mvprintw(12,95,"Attaque 2:%s",Player->pokemon1->Attaques[1]->Name);
+
+	mvprintw(14,73,"Contre:%s",PokemonAleatoire->Name);
+	mvprintw(14,95,"Attaque 1:%s",PokemonAleatoire->Attaques[0]->Name);
+	mvprintw(15,95,"Attaque 2:%s",PokemonAleatoire->Attaques[1]->Name);
+	refresh();
+	do{
+		mvprintw(17,73,"Attaque 1 ou Attaque 2");
+		mvprintw(12,73,"Vie Actuel:   ",Player->pokemon1->ActualHp);
+		mvprintw(12,73,"Vie Actuel:%d",Player->pokemon1->ActualHp);
+		mvprintw(15,73,"Vie Actuel:   ",PokemonAleatoire->ActualHp);
+		mvprintw(15,73,"Vie Actuel:%d",PokemonAleatoire->ActualHp);
+		refresh();
+		do {
+			AttaqueChoisi=getch();
+			mvprintw(18,73,"   ");
+			mvprintw(18,73,"%d",AttaqueChoisi);
+			refresh();
+		} while(AttaqueChoisi!=49&&AttaqueChoisi!=50);
+		mvprintw(19,73,"Vous avez choisi %s           ",Player->pokemon1->Attaques[AttaqueChoisi-49]->Name);
+		refresh();
+		AttaqueAleatoire=rand()%2;
+		DegatPlayer=( (((Player->pokemon1->Level)*(4)+2)*(Player->pokemon1->Attaques[AttaqueChoisi-49]->Dommage)*(Player->pokemon1->att)+2)/((PokemonAleatoire->def)*50) );
+		DegatAdversaire=((((PokemonAleatoire->Level)*(4)+2)*(PokemonAleatoire->Attaques[AttaqueAleatoire]->Dommage)*(PokemonAleatoire->att)+2)/((Player->pokemon1->def)*50));
+		mvprintw(20,73,"Degat au pokemon adversaire:   ",DegatPlayer);
+		mvprintw(20,73,"Degat au pokemon adversaire:%d",DegatPlayer);
+		mvprintw(21,73,"Degat au pokemon allie:    ",DegatAdversaire);
+		mvprintw(21,73,"Degat au pokemon allie:%d",DegatAdversaire);
+		refresh();
+		Player->pokemon1->ActualHp =(Player->pokemon1->ActualHp-DegatAdversaire);
+		PokemonAleatoire->ActualHp =(PokemonAleatoire->ActualHp-DegatPlayer);
+
+	}while(((Player->pokemon1->ActualHp)>0)&&((PokemonAleatoire->ActualHp)>0));
+	if (PokemonAleatoire->ActualHp>0)
+		mvprintw(22,73,"Vous avez perdu le combat");
+	else
+		mvprintw(22,73,"Vous avez gagne");
+	mvprintw(23,73,"Pressez 'a' pour continuez");
+	refresh();
+	do {
+		c=getchar();
+	} while(c!=97);
+	erase();
+	AffichageCarte();
 	refresh();
 }
 
@@ -176,7 +320,25 @@ void Deplacement(int ch,int *posY,int *posX){
 	refresh();
 }
 
-Pokemon *RecherchePokemonStat(Node *PokemonActuel,int numero){
+att *RechercheAttaquesStat(NodeAtt *AttaqueActuel,int numero){
+	if (AttaqueActuel==NULL){
+		return 0;
+	}
+	else if((AttaqueActuel->Actuel->Number)==numero){
+		return (AttaqueActuel->Actuel);
+	}
+	else
+	{
+		if((AttaqueActuel->Actuel->Number)>numero){
+			return RechercheAttaquesStat((*AttaqueActuel).LeftSon,numero);
+		}
+		if((AttaqueActuel->Actuel->Number)<numero){
+			return RechercheAttaquesStat((*AttaqueActuel).RightSon,numero);
+		}
+	}
+}
+
+Pokemon *RecherchePokemonStat(NodePokemon *PokemonActuel,int numero){
 	if (PokemonActuel==NULL){
 		return 0;
 	}
@@ -194,10 +356,40 @@ Pokemon *RecherchePokemonStat(Node *PokemonActuel,int numero){
 	}
 }
 
-void RencontreAleatoire(Joueur *Player,Node *ListePokemon){
+void AssociationAttaqueAPokemon(NodeAtt *ArbreAtt,Pokemon *pokemon){
+	pokemon->Attaques[0]=RechercheAttaquesStat(ArbreAtt,pokemon->Attaques[0]->Number);
+	pokemon->Attaques[1]=RechercheAttaquesStat(ArbreAtt,pokemon->Attaques[1]->Number);
+}
+
+Joueur *ChoixStarter(NodeAtt *ArbreAtt,NodePokemon*ListePokemon){
+	int Touche;
+	Joueur *Player=(Joueur*)malloc(sizeof(Player));
+	mvprintw(LINES/2-1,COLS/2,"Entrez le numero du pokemon voulu pour commencer");
+	mvprintw(LINES/2,COLS/2,"Bulbizarre Salameche Carapuce");
+	mvprintw(LINES/2 +1,COLS/2,"1             2         3");
+	refresh();
+	do{
+		Touche=getch();
+		switch (Touche){
+			case 49:
+			Player->pokemon1=RecherchePokemonStat(ListePokemon,1);
+			break;
+			case 50:
+			Player->pokemon1=RecherchePokemonStat(ListePokemon,3);
+			break;
+			case 51:
+			Player->pokemon1=RecherchePokemonStat(ListePokemon,5);
+			break;
+		}
+	}while((Touche!=49)&&(Touche!=50)&&(Touche!=51));
+	AssociationAttaqueAPokemon(ArbreAtt,Player->pokemon1);
+	return Player;
+}
+
+void RencontreAleatoire(Joueur *Player,NodePokemon *ListePokemon,NodeAtt *ArbreAtt){
 	int Rencontre,PokemonAleatoire;
 	Pokemon *PokemonRencontre;
-	Rencontre=rand()%20;
+	Rencontre=rand()%5;
 	if((Rencontre)==0){
 		switch (rand()%500){
 			case 0 ... 24://1 ->5%
@@ -254,42 +446,21 @@ void RencontreAleatoire(Joueur *Player,Node *ListePokemon){
 			case 485 ... 499://18 ->3%
 				PokemonAleatoire=31;
 				break;
+			}
+			Pokemon *PokemonRandom=RecherchePokemonStat(ListePokemon,PokemonAleatoire);
+			AssociationAttaqueAPokemon(ArbreAtt,PokemonRandom);
+			CombatNature(Player,PokemonRandom);
 		}
-		CombatNature(Player,RecherchePokemonStat(ListePokemon,PokemonAleatoire));
-
-		}
-}
-
-Joueur *ChoixStarter(Node*ListePokemon){
-	int Touche;
-	Joueur *Player=(Joueur*)malloc(sizeof(Player));
-	mvprintw(LINES/2-1,COLS/2,"Entrez le numero du pokemon voulu pour commencer");
-	mvprintw(LINES/2,COLS/2,"Bulbizarre Salameche Carapuce");
-	mvprintw(LINES/2 +1,COLS/2,"1             2         3");
-	refresh();
-	do{
-		Touche=getch();
-		mvprintw(LINES/2 +2,COLS/2,"%d",Touche);
-		switch (Touche){
-			case 49:
-				Player->pokemon1=RecherchePokemonStat(ListePokemon,1);
-				break;
-			case 50:
-				Player->pokemon1=RecherchePokemonStat(ListePokemon,2);
-				break;
-			case 51:
-				Player->pokemon1=RecherchePokemonStat(ListePokemon,3);
-				break;
-		}
-	}while((Touche!=49)&&(Touche!=50)&&(Touche!=51));
 }
 
 int main(){
 	srand(time(NULL));
 	int ChoixPartie,ch,posX,posY,PokemonAleatoire=0,Rencontre=0;
-	Node *ListePokemon=NULL;
+	NodePokemon *ListePokemon=NULL;
+	NodeAtt *ListeAttaques=NULL;
 	FILE *fichier=NULL;
 	Pokemon *test=NULL,*PokemonRencontre=NULL;
+	att *attaques=NULL;
 	Joueur *Player=NULL;
 	system("clear");
 	printf("Voulez-vous démarrer une nouvelle partie ?(1=Nouvelle partie/2=Ancienne partie)");
@@ -299,17 +470,23 @@ int main(){
 	if(fichier==NULL) printf("Erreur ouverture fichier");
 	for (size_t i = 1; i <= 31; i++) {
 		test=LectureListePokemon(fichier);
-		ListePokemon=Ajout(ListePokemon,test);
+		ListePokemon=AjoutPokemon(ListePokemon,test);
 	}
-	//Ordre(ListePokemon);
+	fclose(fichier);
+	fichier=fopen("ListeAttaques.txt","r");
+	for (size_t i = 0; i < 3; i++) {
+		attaques=LectureListeAtt(fichier);
+		ListeAttaques=AjoutAttaque(ListeAttaques,attaques);
+	}
+
+//	Ordre(ListeAttaques);
 	ncurses_initialiser();
 	if(ChoixPartie==1){
-		Player=ChoixStarter(ListePokemon);
+		Player=ChoixStarter(ListeAttaques,ListePokemon);
+		refresh();
 	}
-	sleep(1);
 	erase();
 	AffichageCarte();
-	AffichageColonne(45,0,70);
 	mvprintw(38,48,"#");
 	refresh();
 	posX=48;posY=38;
@@ -318,10 +495,12 @@ int main(){
 	    /* On efface le curseur */
 	    if( (ch ==KEY_LEFT)||(ch ==KEY_RIGHT)||(ch ==KEY_UP)||(ch ==KEY_DOWN)){
 				Deplacement(ch,&posY,&posX);
+				Player->PositionX=posX;
+				Player->PositionY=posY;
 	    }
 			refresh();
 			if ((posX<=49)&&(posX>=30)&&(posY<=20)&&(posY>=16)||((posX<=49)&&(posX>=41)&&(posY<=29)&&(posY>=20))){
-				RencontreAleatoire(Player,ListePokemon);
+				RencontreAleatoire(Player,ListePokemon,ListeAttaques);
 			}
 			mvprintw(29,75,"Utilisez les touches directionnels pour vous deplacez");
 			mvprintw(30,75,"Press f3 pour sortir");
@@ -331,7 +510,7 @@ int main(){
   DestructionTotal(ListePokemon);
 	free(ListePokemon);
 	free(test);
-  fclose(fichier);
+	fclose(fichier);
 	endwin();
   return 0;
 }
