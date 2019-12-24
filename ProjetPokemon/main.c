@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-#include <color.h>
 
 typedef struct NodePokemon NodePokemon;
 typedef struct NodeAtt NodeAtt;
