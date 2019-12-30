@@ -3,86 +3,33 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include "Suppression.h"
+#include "Outils.h"
+#include "AffichageNcurses.h"
 
-typedef struct NodePokemon NodePokemon;
-typedef struct NodeAtt NodeAtt;
-typedef struct Pokemon Pokemon;
-typedef struct Joueur Joueur;
-typedef struct att att;
+Pokemon *CopiePokemon(Pokemon *PokemonOrigine){
+	Pokemon *PokemonCible=(Pokemon*)malloc(sizeof(Pokemon));
+	PokemonCible->Attaques[0]=(att*)malloc(sizeof(att));
+	PokemonCible->Attaques[1]=(att*)malloc(sizeof(att));
 
-struct NodePokemon{
-	Pokemon *Actuel;
-	NodePokemon *LeftSon;
-	NodePokemon *RightSon;
-};
-
-struct NodeAtt{
-	att *Actuel;
-	NodeAtt *LeftSon;
-	NodeAtt *RightSon;
-};
-
-struct Joueur{
-	int PositionX;
-	int PositionY;
-	Pokemon *pokemon1;
-	Pokemon *pokemon2;
-	Pokemon *pokemon3;
-	int Argent;
-};
-
-struct att{
-	int Number;
-	int Dommage;
-	char Name[13];
-};
-
-struct Pokemon{
-	char Name[14];
-  size_t Number;
-  size_t Level;
-  size_t att;
-  size_t def;
-  size_t hp;
-  size_t speed;
-  int ActualHp;
-  size_t ActualXp;
-	att *Attaques[4];
-};
-
-void viderBuffer(){
-    int c = 0;
-    while (c != '\n' && c != EOF)
-    {
-        c = getchar();
-    }
+	PokemonCible->Number=PokemonOrigine->Number;
+	EgaliteEntreTableau(PokemonCible->Name,PokemonOrigine->Name);
+	PokemonCible->Level=PokemonOrigine->Level;
+	PokemonCible->att=PokemonOrigine->att;
+	PokemonCible->def=PokemonOrigine->hp;
+	PokemonCible->speed=PokemonOrigine->speed;
+	PokemonCible->xpNextLevel=PokemonOrigine->xpNextLevel;
+	PokemonCible->ActualXp=PokemonOrigine->ActualXp;
+	PokemonCible->ActualHp=PokemonOrigine->ActualHp;
+	PokemonCible->Attaques[0]=PokemonOrigine->Attaques[0];
+	PokemonCible->Attaques[1]=PokemonOrigine->Attaques[1];
+	return PokemonCible;
 }
 
 void AffichageName(char Name[14]){
 	for (size_t i = 0; i < 14; i++) {
 		mvprintw(i,140,"%c",Name[i]);
 	}
-}
-
-void EgaliteEntreTableau(char Destination[14],char Origine[14]){
-	for (size_t i = 0; i < 14; i++) {
-		Destination[i]=Origine[i];
-	}
-}
-
-void ModificationName(char Name[14]){
-	for (size_t i = 0; i < 14; i++) {
-		if(Name[i]==10) Name[i]='\0';
-	}
-}
-
-void ncurses_initialiser() {
-  initscr();	        /* Demarre le mode ncurses */
-  cbreak();	        /* Pour les saisies clavier (desac. mise en buffer) */
-  noecho();             /* Desactive l'affichage des caracteres saisis */
-  keypad(stdscr, TRUE);	/* Active les touches specifiques */
-  refresh();            /* Met a jour l'affichage */
-  curs_set(FALSE);      /* Masque le curseur */
 }
 
 /*
@@ -100,32 +47,6 @@ void Ordre(NodePokemon *noeud){
 			Ordre((*noeud).RightSon);
   }
 }*/
-
-void Ordre(NodeAtt *noeud){
-  if (noeud!=NULL){
-			Ordre((*noeud).LeftSon);
-			printf("%d\t",noeud->Actuel->Number);
-			printf("%d\t",noeud->Actuel->Dommage);
-			printf("%s\t",noeud->Actuel->Name );
-      printf("\n");
-			Ordre((*noeud).RightSon);
-  }
-}
-
-void DestructionTotal(NodePokemon *Actuel){
-	if(Actuel!=NULL){
-		DestructionTotal((*Actuel).LeftSon);
-		DestructionTotal((*Actuel).RightSon);
-		free(Actuel->RightSon->Actuel->Attaques[0]);
-		free(Actuel->RightSon->Actuel->Attaques[1]);
-		free(Actuel->LeftSon->Actuel->Attaques[0]);
-		free(Actuel->LeftSon->Actuel->Attaques[1]);
-		(*Actuel).RightSon=NULL;
-		(*Actuel).LeftSon=NULL;
-		free(Actuel);
-		Actuel=NULL;
-	}
-}
 
 NodeAtt *AjoutAttaque(NodeAtt *Noeud,att *attaques) {
   if (Noeud==NULL){
@@ -173,6 +94,7 @@ Pokemon *LectureListePokemon(FILE *fichier){
 	Nouveau->Attaques[1]=(att*)malloc(sizeof(att));
 	Nouveau->Level=1;
   fscanf(fichier,"%ld",&(Nouveau->Number));
+	fscanf(fichier,"%d",&(Nouveau->xpNextLevel));
 	fscanf(fichier,"%ld",&(Nouveau->hp));
 	fscanf(fichier,"%ld",&(Nouveau->att));
 	fscanf(fichier,"%ld",&(Nouveau->def));
@@ -201,79 +123,34 @@ att *LectureListeAtt(FILE *fichier){
   return Nouveau;
 }
 
-void AffichageLigne(int longeur,int y,int x){
-	for (size_t i = 0; i < longeur; i++) {
-		mvprintw(y,x+1+i,"_");
-		refresh();
-	}
-}
-
-void AffichageColonne(int longeur,int y,int x){
-	for (size_t i = 0; i < longeur; i++) {
-		mvprintw(y+1+i,x,"|");
-		refresh();
-	}
-}
-
-void AffichageCarte() {
-	AffichageColonne(10,1,1);
-	AffichageLigne(40,1,1);
-	AffichageColonne(10,1,42);
-	AffichageLigne(20,11,1);
-	AffichageLigne(14,11,27);
-	AffichageColonne(10,11,22);
-	AffichageColonne(4,11,27);
-	AffichageLigne(24,15,27);
-	AffichageLigne(16,21,22);
-	AffichageColonne(25,15,52);
-	AffichageColonne(10,21,39);
-	AffichageLigne(20,31,18);
-	AffichageColonne(9,31,18);
-	AffichageLigne(33,40,18);
-
-	AffichageColonne(4,16,30);
-	AffichageColonne(4,16,49);
-	AffichageLigne(18,16,30);
-	AffichageLigne(10,20,30);
-
-	AffichageColonne(9,20,41);
-	AffichageColonne(9,20,49);
-	AffichageLigne(7,29,41);
-
-	AffichageColonne(45,0,70);
-
-	refresh();
-}
-
 void CombatNature(Joueur *Player,Pokemon *PokemonAleatoire){
-	int AttaqueChoisi=0,DegatPlayer=0,DegatAdversaire=0,AttaqueAleatoire=0,c;
-	AffichageName(Player->pokemon1->Name);
-	mvprintw(11,73,"Pokemon:%s",Player->pokemon1->Name);
-	mvprintw(11,95,"Attaque 1:%s",Player->pokemon1->Attaques[0]->Name);
-	mvprintw(12,95,"Attaque 2:%s",Player->pokemon1->Attaques[1]->Name);
+	mvprintw(5,73,"Debug:%d",Player->pokemon1->xpNextLevel);
+	int AttaqueChoisi=0,DegatPlayer=0,DegatAdversaire=0,AttaqueAleatoire=0,c,VieAvantCombatAllie=Player->pokemon1->ActualHp,VieAvantCombatEnnemi=PokemonAleatoire->ActualHp;
+	mvprintw(9,73,"Pokemon:%s",Player->pokemon1->Name);
+	mvprintw(9,95,"Attaque 1:%s",Player->pokemon1->Attaques[0]->Name);
+	mvprintw(10,95,"Attaque 2:%s",Player->pokemon1->Attaques[1]->Name);
+	mvprintw(11,73,"Experience Actuel:%d/%d",Player->pokemon1->ActualXp,(Player->pokemon1->xpNextLevel+15*Player->pokemon1->Level));
 
-	mvprintw(14,73,"Contre:%s",PokemonAleatoire->Name);
-	mvprintw(14,95,"Attaque 1:%s",PokemonAleatoire->Attaques[0]->Name);
-	mvprintw(15,95,"Attaque 2:%s",PokemonAleatoire->Attaques[1]->Name);
+	mvprintw(13,73,"Contre:%s",PokemonAleatoire->Name);
+	mvprintw(13,95,"Attaque 1:%s",PokemonAleatoire->Attaques[0]->Name);
+	mvprintw(14,95,"Attaque 2:%s",PokemonAleatoire->Attaques[1]->Name);
 	refresh();
 	do{
 		mvprintw(17,73,"Attaque 1 ou Attaque 2");
-		mvprintw(12,73,"Vie Actuel:   ",Player->pokemon1->ActualHp);
-		mvprintw(12,73,"Vie Actuel:%d",Player->pokemon1->ActualHp);
-		mvprintw(15,73,"Vie Actuel:   ",PokemonAleatoire->ActualHp);
-		mvprintw(15,73,"Vie Actuel:%d",PokemonAleatoire->ActualHp);
+		mvprintw(10,73,"Vie Actuel:   ",Player->pokemon1->ActualHp);
+		mvprintw(10,73,"Vie Actuel:%d",Player->pokemon1->ActualHp);
+		mvprintw(14,73,"Vie Actuel:   ",PokemonAleatoire->ActualHp);
+		mvprintw(14,73,"Vie Actuel:%d",PokemonAleatoire->ActualHp);
 		refresh();
 		do {
 			AttaqueChoisi=getch();
-			mvprintw(18,73,"   ");
-			mvprintw(18,73,"%d",AttaqueChoisi);
 			refresh();
 		} while(AttaqueChoisi!=49&&AttaqueChoisi!=50);
 		mvprintw(19,73,"Vous avez choisi %s           ",Player->pokemon1->Attaques[AttaqueChoisi-49]->Name);
 		refresh();
 		AttaqueAleatoire=rand()%2;
-		DegatPlayer=( (((Player->pokemon1->Level)*(4)+2)*(Player->pokemon1->Attaques[AttaqueChoisi-49]->Dommage)*(Player->pokemon1->att)+2)/((PokemonAleatoire->def)*50) );
-		DegatAdversaire=((((PokemonAleatoire->Level)*(4)+2)*(PokemonAleatoire->Attaques[AttaqueAleatoire]->Dommage)*(PokemonAleatoire->att)+2)/((Player->pokemon1->def)*50));
+		DegatPlayer=( (((Player->pokemon1->Level)*(4)+2)*(Player->pokemon1->Attaques[AttaqueChoisi-49]->Dommage)*((Player->pokemon1->att)+Player->pokemon1->att)+2)/((PokemonAleatoire->def+PokemonAleatoire->Level)*50) );
+		DegatAdversaire=((((PokemonAleatoire->Level)*(4)+2)*(PokemonAleatoire->Attaques[AttaqueAleatoire]->Dommage)*(PokemonAleatoire->att+PokemonAleatoire->Level)+2)/((Player->pokemon1->def+Player->pokemon1->Level)*50));
 		mvprintw(20,73,"Degat au pokemon adversaire:   ",DegatPlayer);
 		mvprintw(20,73,"Degat au pokemon adversaire:%d",DegatPlayer);
 		mvprintw(21,73,"Degat au pokemon allie:    ",DegatAdversaire);
@@ -283,10 +160,17 @@ void CombatNature(Joueur *Player,Pokemon *PokemonAleatoire){
 		PokemonAleatoire->ActualHp =(PokemonAleatoire->ActualHp-DegatPlayer);
 
 	}while(((Player->pokemon1->ActualHp)>0)&&((PokemonAleatoire->ActualHp)>0));
-	if (PokemonAleatoire->ActualHp>0)
+	if (PokemonAleatoire->ActualHp>0){
 		mvprintw(22,73,"Vous avez perdu le combat");
-	else
+	}
+	else{
+		Player->pokemon1->ActualXp+=((Player->pokemon1->Level+2)*(PokemonAleatoire->Level+2)+3);
 		mvprintw(22,73,"Vous avez gagne");
+		if ((Player->pokemon1->ActualXp)>=(Player->pokemon1->xpNextLevel+(Player->pokemon1->Level)*15)){
+			Player->pokemon1->ActualXp=(Player->pokemon1->ActualXp-(Player->pokemon1->xpNextLevel+(Player->pokemon1->Level)*15));
+			(Player->pokemon1->Level)++;
+		}
+	}
 	mvprintw(23,73,"Pressez 'a' pour continuez");
 	refresh();
 	do {
@@ -295,28 +179,9 @@ void CombatNature(Joueur *Player,Pokemon *PokemonAleatoire){
 	erase();
 	AffichageCarte();
 	refresh();
-}
-
-void Deplacement(int ch,int *posY,int *posX){
-	mvprintw((*posY), (*posX)," ");
-	/* On calcule la nouvelle position */
-	switch(ch) {
-		case KEY_LEFT:
-			if((*posX) > 0) (*posX)--;
-				break;
-		case KEY_RIGHT:
-			if((*posX) < COLS - 1) (*posX)++;
-				break;
-		case KEY_UP:
-			if((*posY) > 0) (*posY)--;
-				break;
-		case KEY_DOWN:
-			if((*posY) < LINES - 1) (*posY)++;
-				break;
-	}
-	/* On affiche le curseur */
-	mvprintw((*posY), (*posX), "#");
-	refresh();
+	PokemonAleatoire->ActualHp =VieAvantCombatEnnemi;
+	Player->pokemon1->ActualHp =VieAvantCombatAllie;
+	//SuppressionPokemon(PokemonAleatoire);
 }
 
 att *RechercheAttaquesStat(NodeAtt *AttaqueActuel,int numero){
@@ -371,23 +236,26 @@ Joueur *ChoixStarter(NodeAtt *ArbreAtt,NodePokemon*ListePokemon){
 		Touche=getch();
 		switch (Touche){
 			case 49:
-			Player->pokemon1=RecherchePokemonStat(ListePokemon,1);
+			Player->pokemon1=CopiePokemon(RecherchePokemonStat(ListePokemon,1));
 			break;
 			case 50:
-			Player->pokemon1=RecherchePokemonStat(ListePokemon,3);
+			Player->pokemon1=CopiePokemon(RecherchePokemonStat(ListePokemon,3));
 			break;
 			case 51:
-			Player->pokemon1=RecherchePokemonStat(ListePokemon,5);
+			Player->pokemon1=CopiePokemon(RecherchePokemonStat(ListePokemon,5));
 			break;
 		}
 	}while((Touche!=49)&&(Touche!=50)&&(Touche!=51));
+	mvprintw(LINES/2-10,COLS/2,"%d",Player->pokemon1->xpNextLevel);
+	refresh();
+	sleep(1);
 	AssociationAttaqueAPokemon(ArbreAtt,Player->pokemon1);
 	return Player;
 }
 
 void RencontreAleatoire(Joueur *Player,NodePokemon *ListePokemon,NodeAtt *ArbreAtt){
 	int Rencontre,PokemonAleatoire;
-	Pokemon *PokemonRencontre;
+	Pokemon *PokemonRandom;
 	Rencontre=rand()%5;
 	if((Rencontre)==0){
 		switch (rand()%500){
@@ -446,15 +314,67 @@ void RencontreAleatoire(Joueur *Player,NodePokemon *ListePokemon,NodeAtt *ArbreA
 				PokemonAleatoire=31;
 				break;
 			}
-			Pokemon *PokemonRandom=RecherchePokemonStat(ListePokemon,PokemonAleatoire);
+			PokemonRandom=CopiePokemon(RecherchePokemonStat(ListePokemon,PokemonAleatoire));
 			AssociationAttaqueAPokemon(ArbreAtt,PokemonRandom);
 			CombatNature(Player,PokemonRandom);
 		}
 }
 
+void EcritureSauvegarde(Joueur *Player){
+	FILE *fichier=NULL;
+	fichier=fopen("Sauvegarde.txt","w");
+	fprintf(fichier,"%ld ",Player->pokemon1->Number);
+	fprintf(fichier,"%ld ",Player->pokemon1->Level);
+	fprintf(fichier,"%d ",Player->pokemon1->Attaques[0]->Number);
+	fprintf(fichier,"%d ",Player->pokemon1->Attaques[1]->Number);
+	fprintf(fichier,"%d ",Player->pokemon1->ActualHp);
+	fprintf(fichier,"%ld ",Player->pokemon1->ActualXp);
+	fprintf(fichier,"%ld ",Player->pokemon1->att);
+	fprintf(fichier,"%ld ",Player->pokemon1->def);
+	fprintf(fichier,"%ld ",Player->pokemon1->hp);
+	fprintf(fichier,"%ld ",Player->pokemon1->speed);
+	fprintf(fichier,"%d ",Player->pokemon1->xpNextLevel);
+	fprintf(fichier,"%d ",Player->PositionX);
+	fprintf(fichier,"%d ",Player->PositionY);
+	fprintf(fichier,"%d ",Player->Argent);
+	fprintf(fichier,"%s",Player->pokemon1->Name);
+	fclose(fichier);
+}
+
+Joueur *LectureSauvegarde(NodeAtt *ArbreAtt){
+	FILE *fichier=NULL;
+	fichier=fopen("Sauvegarde.txt","r");
+	Joueur *Player=(Joueur*)malloc(sizeof(Joueur));
+	Pokemon *PokemonActuel=(Pokemon*)malloc(sizeof(Pokemon));
+	Player->pokemon1=PokemonActuel;
+	att *Attaques0=(att*)malloc(sizeof(att));
+	Player->pokemon1->Attaques[0]=Attaques0;
+	att *Attaques1=(att*)malloc(sizeof(att));
+	Player->pokemon1->Attaques[1]=Attaques1;
+	fscanf(fichier,"%ld",&(Player->pokemon1->Number));
+	fscanf(fichier,"%ld",&(Player->pokemon1->Level));
+	fscanf(fichier,"%d",&(Player->pokemon1->Attaques[0]->Number));
+	fscanf(fichier,"%d",&(Player->pokemon1->Attaques[1]->Number));
+	fscanf(fichier,"%d",&(Player->pokemon1->ActualHp));
+	fscanf(fichier,"%ld",&(Player->pokemon1->ActualXp));
+	fscanf(fichier,"%ld",&(Player->pokemon1->att));
+	fscanf(fichier,"%ld",&(Player->pokemon1->def));
+	fscanf(fichier,"%ld",&(Player->pokemon1->hp));
+	fscanf(fichier,"%ld",&(Player->pokemon1->speed));
+	fscanf(fichier,"%d",&(Player->pokemon1->xpNextLevel));
+	fscanf(fichier,"%d",&(Player->PositionX));
+	fscanf(fichier,"%d",&(Player->PositionY));
+	fscanf(fichier,"%d",&(Player->Argent));
+	fgets(Player->pokemon1->Name,14,fichier);
+	AssociationAttaqueAPokemon(ArbreAtt,Player->pokemon1);
+	AssociationAttaqueAPokemon(ArbreAtt,Player->pokemon1);
+	fclose(fichier);
+	return Player;
+}
+
 int main(){
 	srand(time(NULL));
-	int ChoixPartie,ch,posX,posY,PokemonAleatoire=0,Rencontre=0;
+	int ChoixPartie,ch,posX,posY,PokemonAleatoire=0,Rencontre=0,Clavier=0;
 	NodePokemon *ListePokemon=NULL;
 	NodeAtt *ListeAttaques=NULL;
 	FILE *fichier=NULL;
@@ -483,15 +403,24 @@ int main(){
 	if(ChoixPartie==1){
 		Player=ChoixStarter(ListeAttaques,ListePokemon);
 		refresh();
+		posX=48;posY=38;
 	}
+	else{
+		Player=LectureSauvegarde(ListeAttaques);
+		posX=Player->PositionX;
+		posY=Player->PositionY;
+	}
+	sleep(1);
+	system("clear");
 	erase();
 	AffichageCarte();
-	mvprintw(38,48,"#");
+	mvprintw(posY,posX,"#");
 	refresh();
-	posX=48;posY=38;
 //#########################Boucle principale de jeu#########################################
 	do {
-	    /* On efface le curseur */
+			mvprintw(29,75,"Utilisez les touches directionnels pour vous deplacez");
+			mvprintw(30,75,"Press f3 pour avoir le menu");
+			refresh();
 	    if( (ch ==KEY_LEFT)||(ch ==KEY_RIGHT)||(ch ==KEY_UP)||(ch ==KEY_DOWN)){
 				Deplacement(ch,&posY,&posX);
 				Player->PositionX=posX;
@@ -501,15 +430,49 @@ int main(){
 			if ((posX<=49)&&(posX>=30)&&(posY<=20)&&(posY>=16)||((posX<=49)&&(posX>=41)&&(posY<=29)&&(posY>=20))){
 				RencontreAleatoire(Player,ListePokemon,ListeAttaques);
 			}
-			mvprintw(29,75,"Utilisez les touches directionnels pour vous deplacez");
-			mvprintw(30,75,"Press f3 pour sortir");
-			refresh();
-	} while((ch = getch()) != KEY_F(3));
+
+			if ((ch = getch()) == KEY_F(3)) {
+				mvprintw(10,73,"1:Afficher liste pokemon");
+				mvprintw(11,73,"2:Afficher profil");
+				mvprintw(12,73,"3:Sauvegarder");
+				mvprintw(13,73,"4:Quitter le jeu");
+				mvprintw(14,73,"5:Sortir");
+				do {
+					Clavier=getch()-48;
+				} while(Clavier!=1&&Clavier!=2&&Clavier!=3&&Clavier!=4&&Clavier!=5);
+				switch (Clavier){
+					case 1:
+						move(1,1);
+						system("clear");
+						OrdrePokemon(ListePokemon);
+						while(getch()!='a');
+						break;
+					case 2:
+						move(1,1);
+						system("clear");
+						StatPlayer(Player);
+						while(getch()!='a');
+						break;
+					case 3:
+						break;
+						EcritureSauvegarde(Player);
+					case 4:
+						break;
+					case 5:
+						break;
+				}
+				system("clear");
+				erase();
+				AffichageCarte();
+				mvprintw(posY,posX,"#");
+				refresh();
+			}
+	} while(Clavier!=4);
 //##########################################################################################
+	endwin();
   DestructionTotal(ListePokemon);
-	free(ListePokemon);
 	free(test);
 	fclose(fichier);
-	endwin();
+	SuppressionPlayer(Player);
   return 0;
 }
