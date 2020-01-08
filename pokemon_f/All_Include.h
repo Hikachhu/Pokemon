@@ -1,0 +1,32 @@
+#include "Structure.h"
+
+void OrdrePokemon(NodePokemon *noeud);
+void Defiler(ControleFile *TeteDeFile);
+void DestructionFile(ControleFile *TeteDeFile);
+ControleFile *InitialisationFile();
+void AjoutDansFile(ControleFile *TeteDeFile,int PositionX,int PositionY);
+void LecturePositionImpossible(ControleFile *TeteDeFile);
+Pokemon *LectureListePokemon(FILE *fichier);
+void EcritureSauvegarde(Joueur *Player);
+Joueur *LectureSauvegarde(NodeAtt *ArbreAtt);
+NodePokemon *AjoutPokemon(NodePokemon *Noeud,Pokemon *pokemon);
+NodeAtt *AjoutAttaque(NodeAtt *Noeud,att *attaques);
+att *RechercheAttaquesStat(NodeAtt *AttaqueActuel,int numero);
+Pokemon *RecherchePokemonStat(NodePokemon *PokemonActuel,int numero);
+void DestructionTotal(NodePokemon *Actuel);
+void DestructionTotalAtt(NodeAtt *Actuel);
+Pokemon *CopiePokemon(Pokemon *PokemonOrigine);
+void AssociationAttaqueAPokemon(NodeAtt *ArbreAtt,Pokemon *pokemon);
+void EgaliteEntreTableau(char Destination[14],char Origine[14]);
+void viderBuffer();
+void ncurses_initialiser();
+void ModificationName(char Name[14]);
+void StatPlayer(Joueur *Player);
+void SuppressionPlayer(Joueur *Player);
+void SuppressionPokemon(Pokemon *PokemonCible);
+void AffichageCarte();
+void AffichageLigne(int longeur,int y,int x);
+void AffichageColonne(int longeur,int y,int x);
+void Deplacement(int ch,int *posY,int *posX);
+att *LectureListeAtt(FILE *fichier);
+int VerificationMur(ControleFile *TeteDeFile,int ch,int posX,int posY);
